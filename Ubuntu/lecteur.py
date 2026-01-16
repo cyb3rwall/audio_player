@@ -2,7 +2,7 @@
 """
 Lecteur Musical Simple - Application de lecture de playlists MP3
 Nécessite: pygame, mutagen, tkinter
-Installation: pip install pygame mutagen yt-dlp
+Installation: pip install pygame mutagen
 """
 
 import tkinter as tk
