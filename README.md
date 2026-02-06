@@ -1,6 +1,16 @@
 # Linux
 
-## Setup venv
+## First, clone the project into the directory of your choice. Then, you can choose between 2 methods to install the mp3 player :
+
+### 1] Use installer.sh
+```bash
+chmod +x installer.sh
+./installer.sh
+```
+
+### 2] You can do what the installer does yourself.
+
+### Setup venv
 
 ```bash
 python3 -m venv ~/venv/mp3_player_venv
@@ -8,18 +18,18 @@ source ~/venv/mp3_player_venv/bin/activate
 pip install pygame mutagen
 ```
 
-## Optional module implemented solely for downloading mp3 files that you are authorized to download.
+### Optional module implemented solely for downloading mp3 files that you are authorized to download.
 ```bash
 pip install yt-dlp
 ```
 
-## Launch the player
+### Launch the player
 
 ```bash
 python3 lecteur.py
 ```
 
-## If you want to run it as an app
+### If you want to run it as an app
 
 ```bash
 nano ~/.local/share/applications/mp3-player.desktop
