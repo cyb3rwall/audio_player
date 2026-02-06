@@ -48,18 +48,25 @@ class MusicPlayerFrontend:
     def on_song_changed(self, filename, length, index):
         """Appelé quand la chanson change"""
         if filename:
-            self.song_label.config(text=filename)
+            self.song_label.config(text=f"Playing : {filename}")
             total_time = self.backend.format_time(length)
             self.time_label.config(text=f"0:00 / {total_time}")
-            
+
             # Mettre à jour la sélection dans la listbox
             self.playlist_box.selection_clear(0, tk.END)
             self.playlist_box.selection_set(index)
             self.playlist_box.see(index)
+
+            # Mettre à jour l'état du bouton like
+            current_song = self.backend.playlist[index]
+            if self.backend.is_song_liked(current_song):
+                self.like_button.config(text="❤️", fg="#FF69B4")
+            else:
+                self.like_button.config(text="♡", fg="white")
         else:
-            self.song_label.config(text="Aucune chanson")
+            self.song_label.config(text="No song")
             self.time_label.config(text="0:00 / 0:00")
-        
+
         self.update_slider_position(0)
     
     def on_playback_state_changed(self, is_playing, is_paused):
@@ -92,29 +99,58 @@ class MusicPlayerFrontend:
         # Frame principale
         main_frame = tk.Frame(self.root, bg='#1e1e1e')
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
+
+        # Frame pour le titre de la chanson et le bouton like
+        title_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        title_frame.pack(pady=(0, 10), fill=tk.X)
+
         # Titre de la chanson en cours
         self.song_label = tk.Label(
-            main_frame, 
-            text="Aucune chanson", 
+            title_frame, 
+            text="No song", 
             font=('Arial', 14, 'bold'),
             bg='#1e1e1e',
-            fg='white'
+            fg='white',
+            anchor='w'
         )
-        self.song_label.pack(pady=(0, 10))
-        
+        self.song_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # Bouton cœur pour liker la chanson
+        self.like_button = tk.Button(
+            title_frame,
+            text="♡",
+            font=('Arial', 14),
+            bg='#1e1e1e',
+            fg='white',
+            activebackground='#1e1e1e',
+            activeforeground='#FF69B4',
+            bd=0,
+            command=self.toggle_like
+        )
+        self.like_button.pack(side=tk.RIGHT, padx=5)
+
         # Listbox pour la playlist
         self.create_playlist_box(main_frame)
-        
+
         # Affichage du temps
         self.create_time_display(main_frame)
-        
+
         # Curseur de progression
         self.create_progress_slider(main_frame)
-        
+
         # Boutons de contrôle
         self.create_control_buttons(main_frame)
-    
+
+    def toggle_like(self):
+        """Gère le clic sur le bouton cœur pour liker/déliker une chanson"""
+        current_song = self.backend.playlist[self.backend.current_index] if self.backend.playlist else None
+        if current_song:
+            is_liked = self.backend.toggle_like_song(current_song)
+            if is_liked:
+                self.like_button.config(text="❤️", fg="#FF69B4")
+            else:
+                self.like_button.config(text="♡", fg="white")
+
     def create_playlist_box(self, parent):
         """Crée la listbox pour afficher la playlist"""
         playlist_frame = tk.Frame(parent, bg='#1e1e1e')
@@ -266,6 +302,20 @@ class MusicPlayerFrontend:
             **btn_style
         ).pack(side=tk.LEFT, padx=5)
         
+        # Bouton charger musiques likées
+        tk.Button(
+            control_frame,
+            text="❤️ Liked",
+            command=self.load_liked_songs,
+            bg='#E91E63',
+            fg='white',
+            activebackground='#F06292',
+            font=('Arial', 12),
+            bd=0,
+            padx=15,
+            pady=8
+        ).pack(side=tk.LEFT, padx=5)
+        
         # Bouton télécharger
         tk.Button(
             control_frame,
@@ -321,11 +371,26 @@ class MusicPlayerFrontend:
             if not success:
                 messagebox.showinfo("Info", message)
     
+    def load_liked_songs(self):
+        """Charge les musiques likées dans la playlist"""
+        success, message = self.backend.load_liked_songs()
+        if success:
+            messagebox.showinfo("Musiques likées", message)
+        else:
+            messagebox.showwarning("Musiques likées", message)
+    
     def on_playlist_double_click(self, event):
         """Gère le double-clic sur la playlist"""
         selection = self.playlist_box.curselection()
         if selection:
             self.backend.play_at_index(selection[0])
+
+            # Mettre à jour l'état du bouton like
+            current_song = self.backend.playlist[selection[0]]
+            if self.backend.is_song_liked(current_song):
+                self.like_button.config(text="❤️", fg="#FF69B4")
+            else:
+                self.like_button.config(text="♡", fg="white")
     
     def toggle_shuffle(self):
         """Active/désactive le mode shuffle"""
@@ -533,4 +598,3 @@ def main():
     app = MusicPlayerFrontend(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
-

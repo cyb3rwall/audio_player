@@ -12,6 +12,7 @@ import random
 import subprocess
 import threading
 import re
+import json
 
 
 class MusicPlayerBackend:
@@ -31,6 +32,11 @@ class MusicPlayerBackend:
         self.shuffle_mode = False
         self.download_folder = os.path.expanduser("~/Musique")
         os.makedirs(self.download_folder, exist_ok=True)
+        
+        # Gestion des musiques likées
+        self.liked_songs = []
+        self.liked_songs_file = os.path.expanduser("~/.cache/mp3_player/liked_list.json")
+        self._load_liked_songs()
         
         # Callbacks pour notifier le frontend
         self.on_song_changed = None
@@ -102,6 +108,53 @@ class MusicPlayerBackend:
             self.on_song_changed(None, 0, 0)
         if self.on_playback_state_changed:
             self.on_playback_state_changed(False, False)
+    
+    def _load_liked_songs(self):
+        """Charge la liste des musiques likées depuis le fichier JSON"""
+        try:
+            if os.path.exists(self.liked_songs_file):
+                with open(self.liked_songs_file, 'r', encoding='utf-8') as f:
+                    self.liked_songs = json.load(f)
+        except Exception as e:
+            print(f"Erreur lors du chargement des musiques likées: {e}")
+            self.liked_songs = []
+    
+    def load_liked_songs(self):
+        """Charge les musiques likées dans la playlist (depuis la liste en mémoire)"""
+        if not self.liked_songs:
+            return False, "Aucune musique likée trouvée"
+        
+        # Vérifier quels fichiers existent encore
+        existing_files = [f for f in self.liked_songs if os.path.exists(f)]
+        
+        if not existing_files:
+            return False, "Aucun fichier MP3 liké n'existe plus sur le disque"
+        
+        # Ajouter uniquement les fichiers qui ne sont pas déjà dans la playlist
+        new_files = [f for f in existing_files if f not in self.playlist]
+        
+        if new_files:
+            self.playlist.extend(new_files)
+            if self.on_playlist_updated:
+                self.on_playlist_updated(self.playlist)
+            
+            if len(self.playlist) == len(new_files):
+                self.current_index = 0
+                self.load_song(self.current_index, autoplay=False)
+            
+            return True, f"{len(new_files)} musiques likées ajoutées"
+        
+        return False, "Toutes les musiques likées sont déjà dans la playlist"
+    
+    def _save_liked_songs(self):
+        """Sauvegarde la liste des musiques likées dans le fichier JSON"""
+        try:
+            # Créer le répertoire si nécessaire
+            os.makedirs(os.path.dirname(self.liked_songs_file), exist_ok=True)
+            with open(self.liked_songs_file, 'w', encoding='utf-8') as f:
+                json.dump(self.liked_songs, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde des musiques likées: {e}")
     
     # ===== Gestion de la lecture =====
     
@@ -394,8 +447,31 @@ class MusicPlayerBackend:
     
     # ===== Nettoyage =====
     
+    def _load_liked_songs(self):
+        """Charge la liste des musiques likées depuis le fichier"""
+        if os.path.exists(self.liked_songs_file):
+            try:
+                with open(self.liked_songs_file, 'r', encoding='utf-8') as file:
+                    self.liked_songs = json.load(file)
+            except (json.JSONDecodeError, IOError):
+                self.liked_songs = []
+
+    def toggle_like_song(self, song_path):
+        """Ajoute ou retire une musique de la liste des musiques likées"""
+        if song_path in self.liked_songs:
+            self.liked_songs.remove(song_path)
+            return False  # Déliké
+        else:
+            self.liked_songs.append(song_path)
+            return True  # Liké
+
+    def is_song_liked(self, song_path):
+        """Vérifie si une musique est likée"""
+        return song_path in self.liked_songs
+
     def cleanup(self):
-        """Nettoie les ressources"""
+        """Nettoie les ressources et sauvegarde les données"""
+        self._save_liked_songs()
         pygame.mixer.music.stop()
         pygame.mixer.quit()
     
