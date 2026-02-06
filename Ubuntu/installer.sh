@@ -100,8 +100,10 @@ read -p "Voulez-vous installer yt-dlp ? (o/n) : " install_ytdlp
 if [[ "$install_ytdlp" =~ ^[oO]$ ]]; then
     pip install yt-dlp || handle_error "Échec de l'installation de yt-dlp"
     print_success "yt-dlp installé avec succès"
+    YTDLP_INSTALLED="true"
 else
     print_info "Installation de yt-dlp ignorée"
+    YTDLP_INSTALLED="false"
 fi
 echo ""
 
@@ -128,6 +130,58 @@ fi
 print_step "Création du lanceur d'application..."
 DESKTOP_DIR="$HOME/.local/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/mp3-player.desktop"
+CONFIG_DIR="$HOME/.cache/mp3_player"
+CONFIG_FILE="$CONFIG_DIR/config.conf"
+
+# Créer le répertoire de configuration
+mkdir -p "$CONFIG_DIR" || handle_error "Impossible de créer le répertoire de configuration"
+
+# Créer le fichier de configuration
+cat > "$CONFIG_FILE" << EOF
+# Configuration MP3 Player
+YTDLP_INSTALLED=$YTDLP_INSTALLED
+INSTALL_DIR=$INSTALL_DIR
+VENV_PATH=$HOME/venv/mp3_player_venv
+EOF
+
+if [ $? -ne 0 ]; then
+    handle_error "Échec de la création du fichier de configuration"
+fi
+print_success "Fichier de configuration créé : $CONFIG_FILE"
+
+# Créer le script de lancement run.sh
+RUN_SCRIPT="$INSTALL_DIR/run.sh"
+cat > "$RUN_SCRIPT" << 'RUNSCRIPT'
+#!/bin/bash
+
+# Fichier de configuration
+CONFIG_FILE="$HOME/.cache/mp3_player/config.conf"
+
+# Charger la configuration
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    echo "Erreur: Fichier de configuration non trouvé"
+    exit 1
+fi
+
+# Activer l'environnement virtuel
+source "$VENV_PATH/bin/activate"
+
+# Vérifier et mettre à jour les dépendances obligatoires (silencieusement)
+pip install --upgrade pygame mutagen > /dev/null 2>&1
+
+# Vérifier et mettre à jour yt-dlp si installé
+if [ "$YTDLP_INSTALLED" = "true" ]; then
+    pip install --upgrade yt-dlp > /dev/null 2>&1
+fi
+
+# Lancer l'application
+python3 "$INSTALL_DIR/src/lecteur.py"
+RUNSCRIPT
+
+chmod +x "$RUN_SCRIPT" || handle_error "Impossible de rendre run.sh exécutable"
+print_success "Script de lancement créé : $RUN_SCRIPT"
 
 # Créer le répertoire si nécessaire
 mkdir -p "$DESKTOP_DIR" || handle_error "Impossible de créer le répertoire $DESKTOP_DIR"
@@ -139,7 +193,7 @@ Version=1.0
 Type=Application
 Name=MP3 Player
 Comment=MP3 player with essential features and without trackers
-Exec=bash -c 'source $HOME/venv/mp3_player_venv/bin/activate && python3 $INSTALL_DIR/src/lecteur.py'
+Exec=$INSTALL_DIR/run.sh
 Icon=$ICON_PATH
 Terminal=false
 Categories=Audio;Player;
@@ -184,6 +238,7 @@ echo "  • Ou lancer manuellement avec :"
 echo "    source ~/venv/mp3_player_venv/bin/activate && python3 $INSTALL_DIR/src/lecteur.py"
 echo ""
 print_info "Pour désinstaller, supprimez simplement :"
-echo "  • L'environnement virtuel : rm -r ~/venv/mp3_player_venv"
+echo "  • L'environnement virtuel : rm -rf ~/venv/mp3_player_venv"
 echo "  • Le lanceur : rm $DESKTOP_FILE"
+echo "  • Le cache et la configuration : rm -rf ~/.cache/mp3_player (contient vos musiques likés et votre choix vis a vis de l'installation de yt-dl"
 echo ""
