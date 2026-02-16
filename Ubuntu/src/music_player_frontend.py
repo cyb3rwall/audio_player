@@ -501,12 +501,22 @@ class MusicPlayerFrontend:
         # Instructions
         instructions = tk.Label(
             dialog,
-            text="Collez l'URL d'une vidéo YouTube ci-dessous:",
+            text="Collez l'URL d'une vidéo YouTube ou YouTube Music ci-dessous:",
             font=('Arial', 10),
             bg='#1e1e1e',
             fg='#b3b3b3'
         )
-        instructions.pack(pady=(0, 10))
+        instructions.pack(pady=(0, 5))
+        
+        # Exemples de formats acceptés
+        examples = tk.Label(
+            dialog,
+            text="Formats acceptés : youtube.com, music.youtube.com, m.youtube.com, youtu.be",
+            font=('Arial', 9),
+            bg='#1e1e1e',
+            fg='#666666'
+        )
+        examples.pack(pady=(0, 10))
         
         # Champ URL
         url_entry = tk.Entry(

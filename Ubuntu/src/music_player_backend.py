@@ -355,8 +355,14 @@ class MusicPlayerBackend:
                 # Extraire l'ID de la vidéo
                 video_id = self._extract_video_id(url)
                 if not video_id:
+                    error_msg = "URL invalide. Seuls les domaines suivants sont autorisés :\n"
+                    error_msg += "• youtube.com\n"
+                    error_msg += "• music.youtube.com\n"
+                    error_msg += "• m.youtube.com\n"
+                    error_msg += "• www.youtube.com\n"
+                    error_msg += "• youtu.be\n"
                     if self.on_error:
-                        self.on_error("URL YouTube invalide")
+                        self.on_error(error_msg)
                     return
                 
                 # Obtenir le titre
@@ -414,11 +420,39 @@ class MusicPlayerBackend:
         thread = threading.Thread(target=download, daemon=True)
         thread.start()
     
+    def _is_valid_youtube_url(self, url):
+        """Vérifie si l'URL provient d'un domaine YouTube autorisé"""
+        allowed_domains = [
+            'youtube.com',
+            'www.youtube.com',
+            'music.youtube.com',
+            'm.youtube.com'
+            'youtu.be'
+        ]
+        
+        # Extraire le domaine de l'URL
+        domain_pattern = r'(?:https?://)?([^/]+)'
+        match = re.match(domain_pattern, url)
+        
+        if not match:
+            return False
+        
+        domain = match.group(1).lower()
+        
+        # Vérifier si le domaine est dans la liste autorisée
+        return any(domain == allowed or domain.endswith('.' + allowed) 
+                   for allowed in allowed_domains)
+    
     def _extract_video_id(self, url):
         """Extrait l'ID d'une vidéo YouTube depuis l'URL"""
+        # Vérifier d'abord la sécurité du domaine
+        if not self._is_valid_youtube_url(url):
+            return None
+        
         patterns = [
             r'(?:youtube\.com/watch\?v=|youtu\.be/)([^&\s]+)',
             r'youtube\.com/embed/([^&\s]+)',
+            r'music\.youtube\.com/watch\?v=([^&\s]+)',  # Support YouTube Music
         ]
         for pattern in patterns:
             match = re.search(pattern, url)

@@ -19,9 +19,16 @@ pip install pygame mutagen
 ```
 
 ### Optional module implemented solely for downloading mp3 files that you are authorized to download.
+
+# Avec yt-dlp
 ```bash
-pip install yt-dlp
+pip install yt-dlp && mkdir -p ~/.cache/mp3_player && echo -e "YTDLP_INSTALLED=true\nINSTALL_DIR=$(pwd)\nVENV_PATH=$HOME/venv/mp3_player_venv" > ~/.cache/mp3_player/config.conf
 ```
+
+# Sans yt-dlp
+```bash
+mkdir -p ~/.cache/mp3_player && echo -e "YTDLP_INSTALLED=false\nINSTALL_DIR=$(pwd)\nVENV_PATH=$HOME/venv/mp3_player_venv" > ~/.cache/mp3_player/config.conf
+``
 
 ### Launch the player
 
